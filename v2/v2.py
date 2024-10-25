@@ -11,6 +11,12 @@ def relu(x):
 def relu_derivative(x):
     return np.where(x > 0, 1, 0)
 
+def sigmoid(x):
+    return 1 / (1 + np.exp(-x))
+
+def sigmoid_prime(x):
+    return sigmoid(x) * (1 - sigmoid(x))
+
 # Función softmax
 def softmax(z):
     exp_z = np.exp(z - np.max(z, axis=1, keepdims=True))  # Evita overflow numérico
@@ -95,6 +101,66 @@ def backpropagation(X, Y, W1, b1, W2, b2, Z1, A1, Z2, A2):
 
     grads = {"dW1": dW1, "db1": db1, "dW2": dW2, "db2": db2}
     return grads
+
+    def backpropagation_general(X, Y, weights, biases, activations, activation_derivatives):
+        """
+        Realiza backpropagation en una red de múltiples capas.
+
+        Parameters:
+            X : np.array
+                Entrada de la red.
+            Y : np.array
+                Etiquetas en formato one-hot.
+            weights : list of np.array
+                Lista de matrices de pesos para cada capa.
+            biases : list of np.array
+                Lista de vectores de bias para cada capa.
+            activations : list of functions
+                Funciones de activación para cada capa.
+            activation_derivatives : list of functions
+                Derivadas de las funciones de activación.
+        Returns:
+            nabla_b : list of np.array
+                Gradientes de los biases para cada capa.
+            nabla_w : list of np.array
+                Gradientes de los pesos para cada capa.
+        """
+        num_layers = len(weights)
+        nabla_b = [np.zeros(b.shape) for b in biases]
+        nabla_w = [np.zeros(w.shape) for w in weights]
+
+        # Feedforward
+        activation = X
+        activations_list = [X]
+        zs = []
+
+        for i in range(num_layers - 1):  # Hasta la capa anterior a la última
+            z = np.dot(activation, weights[i]) + biases[i]
+            zs.append(z)
+            activation = activations[i](z) # Aplicar relu ??
+            activations_list.append(activation)
+
+        # Última capa con softmax
+        z = np.dot(activation, weights[-1]) + biases[-1]
+        zs.append(z)
+        activation = softmax(z)
+        activations_list.append(activation)
+
+        # Backward pass
+        # Calculamos el error en la capa de salida
+        delta = activation - Y  # Aplicar la función de coste entropía cruzada
+        nabla_b[-1] = delta
+        nabla_w[-1] = np.dot(activations_list[-2].T, delta) # Esto sobra creo / X.shape[0]
+
+        # Retropropagamos a través de las capas ocultas
+        for l in range(2, num_layers + 1):
+            z = zs[-l]
+            sp = activation_derivatives[-l](z)
+            delta = np.dot(delta, weights[-l + 1].T) * sp
+            nabla_b[-l] = delta
+            nabla_w[-l] = np.dot(activations_list[-l - 1].T, delta) #Esto creo que sobra / X.shape[0]
+
+        return nabla_b, nabla_w
 
 
 # Función de predicción
